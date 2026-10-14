@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OFFGRID-RESQ – AI-Powered Offline Disaster Communication & Evacuation System</title>
+  <meta name="description" content="Offline disaster communication, emergency triage, duplicate suppression, and evacuation management system designed for zero-connectivity disaster zones.">
+  <meta name="theme-color" content="#070b14">
+
+  <!-- Google Fonts for Tactical Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Core Tactical Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Top System Bar & Emergency Telemetry Ticker -->
+  <div class="system-status-ticker">
+    <div class="ticker-left">
+      <div class="sim-disclaimer-pill" title="Hardware transmission is simulated; local storage, triage & deduplication are fully implemented.">
+        <span class="pulse-dot"></span>
+        <span>PROTOCOL: LORA/BLE MESH SIMULATED</span>
+      </div>
+
+      <div class="network-mode-toggle-group">
+        <span style="color:var(--text-muted); font-size:0.72rem; font-weight:600;">SIMULATE GRID COLLAPSE:</span>
+        <label class="switch" title="Toggle between Online Gateway and Pure Offline Mesh Mode">
+          <input type="checkbox" id="gridFailureToggle">
+          <span class="slider"></span>
+        </label>
+        <span id="networkStatusBadge" class="network-badge online">● GRID ONLINE</span>
+      </div>
+
+      <span id="outboxStatusPill" class="sim-disclaimer-pill" style="display:none; background:rgba(255,145,0,0.15); color:var(--high-orange); border-color:var(--high-orange);">
+        ⚡ Outbox: 0 pending
+      </span>
+    </div>
+
+    <div class="ticker-right">
+      <button id="audioBeaconHeaderBtn" class="audio-beacon-btn" title="Synthesizes official 800Hz SOS Morse Code beacon (... --- ...) via Web Audio API">
+        📢 DISTRESS SOS BEACON
+      </button>
+      <button id="visualStrobeBtn" class="btn-sm" style="font-size:0.72rem; background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2);" title="Flashes screen in Morse SOS pattern for night rescue helicopters">
+        💡 NIGHT STROBE
+      </button>
+    </div>
+  </div>
+
+  <!-- App Header & Navigation -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-wrapper">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L1 21h22L12 2zm0 3.8L19.8 19H4.2L12 5.8zM11 10h2v4h-2zm0 6h2v2h-2z"/>
+          </svg>
+        </div>
+        <div class="brand-title-area">
+          <h1>OFFGRID-RESQ</h1>
+          <div class="brand-subtitle">AI-Powered Offline Disaster Communication & Evacuation System</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs" aria-label="Main Navigation">
+        <button class="nav-tab-btn active" data-view="citizen-sos" id="navCitizenSos">
+          <span>🆘 Citizen SOS Terminal</span>
+        </button>
+        <button class="nav-tab-btn" data-view="rescue-dashboard" id="navRescueDashboard">
+          <span>🛡️ Rescue Command</span>
+          <span class="badge-count" id="navCriticalBadge" style="display:none;">0</span>
+        </button>
+        <button class="nav-tab-btn" data-view="offline-shelters" id="navShelters">
+          <span>⛨ Shelters & Playbooks</span>
+        </button>
+        <button class="nav-tab-btn" data-view="testing-diagnostics" id="navDiagnostics">
+          <span>📊 Testing Lab & Telemetry</span>
+        </button>
+        <button class="nav-tab-btn" data-view="architecture-spec" id="navArchitecture">
+          <span>⚡ Architecture & Protocols</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Views -->
+  <main class="app-main">
+
+    <!-- ====================================================================
+         VIEW 1: CITIZEN SOS MODULE
+         ==================================================================== -->
+    <section id="view-citizen-sos" class="view-section active">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header-title">Citizen Emergency SOS Transmitter</h2>
+          <p class="section-header-desc">
+            Broadcast emergency distress packets across offline peer-to-peer mesh networks. 
+            All submissions are cached persistently in local device flash memory (LocalStorage) even if Internet and cellular towers are down.
+          </p>
+        </div>
+        <div>
+          <button id="syncOutboxBtn" class="btn-secondary" title="Flush any locally stored offline packets into active mesh broadcast">
+            🔄 Sync Offline Outbox
+          </button>
+        </div>
+      </div>
+
+      <div class="citizen-sos-container">
+        <!-- Main Form Column -->
+        <div class="sos-form-card">
+          <form id="citizenSosForm">
+
+            <!-- 1. Emergency Type Selection -->
+            <div class="form-group">
+              <label class="form-label">
+                <span>1. Select Emergency Type</span>
+                <span class="label-hint">Classifies hazard profile</span>
+              </label>
+              <div class="emergency-type-grid">
+                <label class="emergency-radio-card">
+                  <input type="radio" name="emergencyType" value="flood" checked>
+                  <div class="emergency-radio-content">
+                    <span class="emergency-icon">🌊</span>
+                    <span class="emergency-name">Flash Flood</span>
+                  </div>
+                </label>
+                <label class="emergency-radio-card">
+                  <input type="radio" name="emergencyType" value="collapse">
+                  <div class="emergency-radio-content">
+                    <span class="emergency-icon">🏚️</span>
+                    <span class="emergency-name">Collapse / Trapped</span>
+                  </div>
+                </label>
+                <label class="emergency-radio-card">
+                  <input type="radio" name="emergencyType" value="wildfire">
+                  <div class="emergency-radio-content">
+                    <span class="emergency-icon">🔥</span>
+                    <span class="emergency-name">Wildfire</span>
+                  </div>
+                </label>
+                <label class="emergency-radio-card">
+                  <input type="radio" name="emergencyType" value="medical">
+                  <div class="emergency-radio-content">
+                    <span class="emergency-icon">🩸</span>
+                    <span class="emergency-name">Medical Trauma</span>
+                  </div>
+                </label>
+                <label class="emergency-radio-card">
+                  <input type="radio" name="emergencyType" value="cyclone">
+                  <div class="emergency-radio-content">
+                    <span class="emergency-icon">🌪️</span>
+                    <span class="emergency-name">Cyclone / Storm</span>
+                  </div>
+                </label>
+                <label class="emergency-radio-card">
+                  <input type="radio" name="emergencyType" value="hazmat">
+                  <div class="emergency-radio-content">
+                    <span class="emergency-icon">☣️</span>
+                    <span class="emergency-name">Hazmat / Gas</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 2. Location & Offline GPS -->
+            <div class="form-group">
+              <label class="form-label">
+                <span>2. Emergency Location & GPS Coordinates</span>
+                <span class="label-hint">HTML5 Geolocation or Grid Landmark</span>
+              </label>
+              <div class="location-input-group">
+                <input type="text" id="locationTextInput" class="text-input" placeholder="e.g. Sector 4, Riverbank St. House 12, Floor 2" required>
+                <button type="button" id="autoGpsBtn" class="btn-secondary" title="Uses genuine browser HTML5 Geolocation API">
+                  🛰️ Auto-Detect GPS
+                </button>
+              </div>
+              <div class="gps-telemetry-badge">
+                <span id="gpsReadoutText">GPS Status: Awaiting auto-detection or manual coordinates</span>
+                <span>[WGS-84 / MGRS]</span>
+              </div>
+            </div>
+
+            <!-- 3. People Affected & Vulnerable Groups -->
+            <div class="form-group" style="display:grid; grid-template-columns: 1fr 1.5fr; gap:16px;">
+              <div>
+                <label class="form-label">
+                  <span>3. Persons Affected</span>
+                  <span class="label-hint">Headcount</span>
+                </label>
+                <div class="number-stepper">
+                  <button type="button" id="peopleDec" class="stepper-btn">-</button>
+                  <span id="peopleCountVal" class="stepper-val">1</span>
+                  <button type="button" id="peopleInc" class="stepper-btn">+</button>
+                </div>
+              </div>
+
+              <div>
+                <label class="form-label">
+                  <span>Vulnerable Demographics Present</span>
+                  <span class="label-hint">High triage priority</span>
+                </label>
+                <div class="chips-group">
+                  <label class="chip-label">
+                    <input type="checkbox" name="vulnerabilities" value="infants">
+                    <span class="chip-text">👶 Infants / Kids</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="vulnerabilities" value="elderly">
+                    <span class="chip-text">👵 Elderly (&gt;65)</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="vulnerabilities" value="mobility_impaired">
+                    <span class="chip-text">♿ Non-Ambulatory</span>
+                  </label>
+                  <label class="chip-label">
+                    <input type="checkbox" name="vulnerabilities" value="medical_dependent">
+                    <span class="chip-text">💊 Oxygen / Insulin</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Injury Severity Level -->
+            <div class="form-group">
+              <label class="form-label">
+                <span>4. Worst Injury Severity (START Triage Protocol)</span>
+                <span class="label-hint">Triage factor</span>
+              </label>
+              <div class="severity-selector">
+                <label class="severity-pill">
+                  <input type="radio" name="injurySeverity" value="life_threatening">
+                  <div class="severity-pill-content critical">
+                    <span class="level-title">Life-Threatening</span>
+                    <span class="level-sub">Unconscious / Airway / Arterial</span>
+                  </div>
+                </label>
+                <label class="severity-pill">
+                  <input type="radio" name="injurySeverity" value="severe" checked>
+                  <div class="severity-pill-content severe">
+                    <span class="level-title">Severe Injury</span>
+                    <span class="level-sub">Fracture / Deep Wound / Pinned</span>
+                  </div>
+                </label>
+                <label class="severity-pill">
+                  <input type="radio" name="injurySeverity" value="minor">
+                  <div class="severity-pill-content minor">
+                    <span class="level-title">Minor Injury</span>
+                    <span class="level-sub">Ambulatory / Lacerations</span>
+                  </div>
+                </label>
+                <label class="severity-pill">
+                  <input type="radio" name="injurySeverity" value="none">
+                  <div class="severity-pill-content none">
+                    <span class="level-title">No Injuries</span>
+                    <span class="level-sub">Trapped Unharmed</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 5. Immediate Environmental Hazards -->
+            <div class="form-group">
+              <label class="form-label">
+                <span>5. Immediate On-Scene Hazards</span>
+                <span class="label-hint">Situational risk</span>
+              </label>
+              <div class="chips-group">
+                <label class="chip-label">
+                  <input type="checkbox" name="hazards" value="rising_water" checked>
+                  <span class="chip-text">🌊 Rapid Rising Water</span>
+                </label>
+                <label class="chip-label">
+                  <input type="checkbox" name="hazards" value="live_wires">
+                  <span class="chip-text">⚡ Downed Live Wires</span>
+                </label>
+                <label class="chip-label">
+                  <input type="checkbox" name="hazards" value="heavy_smoke">
+                  <span class="chip-text">💨 Toxic Smoke / Gas</span>
+                </label>
+                <label class="chip-label">
+                  <input type="checkbox" name="hazards" value="debris_shifting">
+                  <span class="chip-text">🏚️ Shifting Heavy Debris</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 6. Situation Details & Contact -->
+            <div class="form-group" style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+              <div>
+                <label class="form-label">Citizen Name (Optional)</label>
+                <input type="text" id="citizenNameInput" class="text-input" placeholder="e.g. John Doe">
+              </div>
+              <div>
+                <label class="form-label">Emergency Phone / Radio Call</label>
+                <input type="text" id="citizenContactInput" class="text-input" placeholder="e.g. +1 555-0192 or Ch 8">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Situation Details & Access Notes</label>
+              <textarea id="emergencyDetailsInput" class="text-input" rows="2" style="resize:vertical;" placeholder="Describe exact location, visible landmarks, access barricades, or special rescue needs..."></textarea>
+            </div>
+
+            <!-- Citizen Privacy Shield & Duplicate Protection Notice -->
+            <div style="background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.2); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.8rem; color:#b0cce8;">
+                <input type="checkbox" id="maskPrivacyCheckbox" checked>
+                <span><strong>Citizen Privacy Shield:</strong> Mask personal phone & name on public mesh broadcasts (Rescue Command unmasks via authorized PIN).</span>
+              </label>
+            </div>
+
+            <!-- Real-time AI / Heuristic Triage Score Preview Card -->
+            <div id="triagePreviewCard" class="triage-preview-card high">
+              <div id="triageScoreCircle" class="triage-score-circle high">
+                <span id="triageScoreVal" class="score-num">65</span>
+                <span class="score-lbl">TRIAGE</span>
+              </div>
+              <div class="triage-info-col">
+                <div id="triageLevelTitle" class="triage-info-title">
+                  Priority: <strong>HIGH</strong> (AI Triage Score: 65/100)
+                </div>
+                <div id="triageRationaleText" class="triage-info-reason">
+                  Evaluating situational severity and injury factors...
+                </div>
+              </div>
+            </div>
+
+            <!-- Master SOS Submit Button -->
+            <button type="submit" id="sosTransmitBtn" class="btn-sos-transmit">
+              <span>⚡ TRANSMIT EMERGENCY SOS [OFFLINE BROADCAST]</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Right Side: Transmission Receipt & Offline Toolkit -->
+        <div class="sos-receipt-sidebar">
+
+          <!-- Transmission Status Receipt Box (Displays post-submission) -->
+          <div id="sosReceiptCard" class="status-card" style="display:none; border-color:var(--cyan-telemetry);">
+            <div class="status-card-header">
+              <h3><span>🚨</span> SOS Beacon Transmitted</h3>
+              <span id="receiptPriorityBadge" class="priority-tag high">HIGH</span>
+            </div>
+
+            <div style="font-size:0.82rem; margin-bottom:12px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:var(--text-muted);">Unique Incident ID:</span>
+                <span id="receiptIncidentId" style="font-family:var(--font-mono); font-weight:700; color:#fff;">RESQ-2026-XXXX</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:var(--text-muted);">Suppression Status:</span>
+                <span id="receiptBroadcastCount" style="color:var(--purple-mesh); font-family:var(--font-mono);">Broadcasts: 1</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:var(--text-muted);">Timestamp:</span>
+                <span id="receiptTimestamp" style="color:#fff; font-family:var(--font-mono);">--:--:--</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:var(--text-muted);">Command Status:</span>
+                <span id="receiptStatusText" style="color:var(--safe-green); font-weight:700;">BROADCAST ACTIVE</span>
+              </div>
+            </div>
+
+            <div id="receiptDisasterGuidance"></div>
+
+            <div style="margin-top:14px; font-size:0.74rem; color:var(--text-muted); background:rgba(0,0,0,0.3); padding:8px; border-radius:4px;">
+              ℹ️ Your SOS is stored in browser flash storage and will continuously advertise across nearby mesh devices.
+            </div>
+          </div>
+
+          <!-- Self-Help & Safety Signaling Toolkit -->
+          <div class="status-card">
+            <div class="status-card-header">
+              <h3><span>🧰</span> Offline Field Rescue Tools</h3>
+            </div>
+            <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:14px;">
+              Distress signaling utilities that function 100% offline using your device hardware.
+            </p>
+
+            <div class="action-kit-buttons">
+              <button type="button" class="btn-secondary" onclick="document.getElementById('audioBeaconHeaderBtn').click();">
+                📢 Audio Whistle (800Hz)
+              </button>
+              <button type="button" class="btn-secondary" onclick="document.getElementById('visualStrobeBtn').click();">
+                💡 Helicopter Strobe
+              </button>
+              <button type="button" class="btn-secondary" onclick="App.switchView('offline-shelters');">
+                ⛨ Nearest Shelters
+              </button>
+              <button type="button" class="btn-secondary" onclick="App.switchView('architecture-spec');">
+                📡 Mesh Packet Spec
+              </button>
+            </div>
+          </div>
+
+          <!-- Offline Storage Telemetry Indicator -->
+          <div class="status-card" style="background:rgba(10,16,27,0.7);">
+            <div class="status-card-header">
+              <h3 style="font-size:0.88rem;"><span>💾</span> Local Device Persistence</h3>
+            </div>
+            <div style="font-size:0.76rem; color:var(--text-muted); line-height:1.6;">
+              <div>• Storage Engine: <strong>Browser HTML5 LocalStorage & Cache</strong></div>
+              <div>• Data Encryption Preview: <strong>HMAC-SHA256 Signed</strong></div>
+              <div>• Re-broadcast De-duplication: <strong>Composite Fingerprinting Active</strong></div>
+              <div>• Network Mode: <span id="localEngineState" style="color:var(--safe-green);">Ready / Offline Resilient</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 2: RESCUE COMMAND DASHBOARD
+         ==================================================================== -->
+    <section id="view-rescue-dashboard" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header-title">Disaster Operations Command Dashboard</h2>
+          <p class="section-header-desc">
+            Centralized multi-casualty incident management, AI-assisted triage sorting, 
+            unit dispatch, deduplication tracking, and tactical disaster mapping.
+          </p>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="loadScenarioBtn" class="btn-secondary" style="background:rgba(0,229,255,0.15); border-color:var(--cyan-telemetry); color:var(--cyan-telemetry);" title="Injects a realistic multi-incident disaster scenario into storage">
+            ⚡ Load Disaster Scenario
+          </button>
+          <button id="responderAuthBtn" class="btn-secondary" title="Enter PIN 9110 to unlock sensitive citizen contact details">
+            🔒 Responder PIN Unlock
+          </button>
+          <button id="exportJsonBtn" class="btn-secondary" title="Export incident database as structured JSON">
+            📥 Export JSON
+          </button>
+          <button id="exportGeoJsonBtn" class="btn-secondary" title="Export incident database as GeoJSON for GIS mapping">
+            🗺️ Export GeoJSON
+          </button>
+          <button id="purgeResolvedBtn" class="btn-secondary" title="Purge evacuated and resolved tickets from active queue">
+            🧹 Clear Evacuated
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Metrics Grid -->
+      <div class="kpi-metrics-grid">
+        <div class="kpi-card telemetry">
+          <div class="kpi-label">Total SOS Reports</div>
+          <div class="kpi-value-row">
+            <span id="kpiTotalSos" class="kpi-number">0</span>
+            <span class="kpi-subtext">Active Incidents</span>
+          </div>
+        </div>
+
+        <div class="kpi-card critical">
+          <div class="kpi-label">Critical Life-Threatening</div>
+          <div class="kpi-value-row">
+            <span id="kpiCriticalCount" class="kpi-number" style="color:var(--critical-red);">0</span>
+            <span class="kpi-subtext">Immediate Priority</span>
+          </div>
+        </div>
+
+        <div class="kpi-card warning">
+          <div class="kpi-label">Field Units Dispatched</div>
+          <div class="kpi-value-row">
+            <span id="kpiDispatchedCount" class="kpi-number" style="color:var(--high-orange);">0</span>
+            <span class="kpi-subtext">Boats / Helis / Medics</span>
+          </div>
+        </div>
+
+        <div class="kpi-card success">
+          <div class="kpi-label">Evacuated / Safe</div>
+          <div class="kpi-value-row">
+            <span id="kpiEvacuatedCount" class="kpi-number" style="color:var(--safe-green);">0</span>
+            <span class="kpi-subtext">Souls Rescued</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" style="border-right-color:var(--purple-mesh);">
+          <div class="kpi-label">Duplicates Suppressed</div>
+          <div class="kpi-value-row">
+            <span id="kpiDedupCount" class="kpi-number" style="color:var(--purple-mesh);">0</span>
+            <span class="kpi-subtext">Bandwidth Conserved</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Command Filter Toolbar -->
+      <div class="command-toolbar">
+        <div class="toolbar-left">
+          <span style="font-size:0.8rem; font-weight:600; color:var(--text-muted);">FILTER BY:</span>
+          <select id="filterPriority" class="filter-select" aria-label="Filter by Priority">
+            <option value="ALL">All Priorities</option>
+            <option value="CRITICAL">Critical (Code Red)</option>
+            <option value="HIGH">High (Code Amber)</option>
+            <option value="MEDIUM">Medium (Code Yellow)</option>
+          </select>
+
+          <select id="filterStatus" class="filter-select" aria-label="Filter by Status">
+            <option value="ALL">All Statuses</option>
+            <option value="pending">Pending Response</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="dispatched">Unit Dispatched</option>
+            <option value="evacuated">Evacuated / Safe</option>
+          </select>
+        </div>
+
+        <div class="toolbar-right">
+          <input type="text" id="dashboardSearchInput" class="text-input" style="padding:6px 12px; width:260px;" placeholder="🔍 Search ID, Location, Citizen...">
+        </div>
+      </div>
+
+      <!-- Main Dashboard Grid: Feed + Tactical Canvas Map -->
+      <div class="dashboard-grid">
+
+        <!-- Incident Feed Column -->
+        <div class="incident-feed-wrapper">
+          <div id="incidentFeedList" class="incident-feed">
+            <!-- Populated dynamically by App.renderDashboardIncidents() -->
+          </div>
+        </div>
+
+        <!-- Tactical Map Column -->
+        <div class="map-panel-card">
+          <div class="map-header">
+            <div class="map-title">
+              <span>🗺️</span>
+              <span>Tactical Disaster Canvas Map</span>
+              <span class="sim-disclaimer-pill" style="font-size:0.68rem;">100% OFFLINE CANVAS</span>
+            </div>
+            <div style="font-size:0.74rem; font-family:var(--font-mono); color:var(--text-muted);">
+              SECTOR 4 DISASTER ZONE
+            </div>
+          </div>
+
+          <div class="map-canvas-container">
+            <canvas id="tacticalDisasterCanvas"></canvas>
+
+            <div class="map-controls-overlay">
+              <button id="mapZoomInBtn" class="map-ctrl-btn" title="Zoom In">+</button>
+              <button id="mapZoomOutBtn" class="map-ctrl-btn" title="Zoom Out">-</button>
+              <button id="mapResetBtn" class="map-ctrl-btn" title="Reset Map View">⌂</button>
+            </div>
+          </div>
+
+          <div class="map-legend">
+            <div class="legend-item"><span class="legend-dot red"></span> Critical SOS</div>
+            <div class="legend-item"><span class="legend-dot orange"></span> High SOS</div>
+            <div class="legend-item"><span class="legend-dot yellow"></span> Medium SOS</div>
+            <div class="legend-item"><span class="legend-dot green"></span> Safe Shelters</div>
+            <div class="legend-item"><span class="legend-dot mesh"></span> Mesh Repeaters</div>
+          </div>
+
+          <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.4;">
+            💡 <strong>Interactive Controls:</strong> Drag to pan the tactical grid. Mousewheel to zoom. Click any plotted SOS beacon or Safe Haven to open details.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 3: EVACUATION GUIDANCE & SHELTERS
+         ==================================================================== -->
+    <section id="view-offline-shelters" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header-title">Offline Evacuation Guidance & Emergency Playbooks</h2>
+          <p class="section-header-desc">
+            Pre-cached safe havens with real-time Haversine distance calculation, 
+            occupancy tracking, and offline medical/survival action guides.
+          </p>
+        </div>
+      </div>
+
+      <!-- Shelters Cards Grid -->
+      <h3 style="font-size:1.1rem; color:#fff; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+        <span>⛨</span> Pre-Cached Emergency Shelters & Safe Havens
+      </h3>
+      <div id="sheltersGridList" class="shelters-grid">
+        <!-- Rendered dynamically by App.renderSheltersList() -->
+      </div>
+
+      <!-- Survival Playbooks -->
+      <h3 style="font-size:1.1rem; color:#fff; margin-bottom:14px; margin-top:20px; display:flex; align-items:center; gap:8px;">
+        <span>📖</span> Offline Field Survival Playbooks & First-Aid Guides
+      </h3>
+      <div class="playbooks-grid">
+
+        <div class="playbook-card">
+          <h3><span>🌊</span> Flash Flood & Rising Waters Survival</h3>
+          <ul class="playbook-steps">
+            <li>Never attempt to walk, swim, or drive through moving water. 6 inches sweeps humans; 12 inches moves vehicles.</li>
+            <li>Seek immediate high ground or multi-story structures. Do not hide in closed attics without roof access.</li>
+            <li>Kill main electrical breakers if water enters living areas to prevent electrocution.</li>
+            <li>Signal rescuers from roof using brightly colored clothing, mirrors, or high-intensity flashlights.</li>
+          </ul>
+        </div>
+
+        <div class="playbook-card">
+          <h3><span>🏚️</span> Earthquake & Structural Entrapment</h3>
+          <ul class="playbook-steps">
+            <li>If trapped under debris: Protect airway with a cloth to minimize dust and smoke inhalation.</li>
+            <li>Conserve vocal energy: Tap on metal pipes or masonry in rhythmic triples (Tap-Tap-Tap) for acoustic listening gear.</li>
+            <li>Check for bleeding and apply direct pressure or tourniquets immediately using available cloth and sticks.</li>
+            <li>Avoid open flames or matches due to potential ruptured natural gas mains.</li>
+          </ul>
+        </div>
+
+        <div class="playbook-card">
+          <h3><span>🔥</span> Wildfire & Thermal Defense Protocol</h3>
+          <ul class="playbook-steps">
+            <li>Evacuate immediately upon early notice. If trapped by fire front, find areas with no fuel (bare soil, riverbanks).</li>
+            <li>Stay low: Superheated toxic air and carbon monoxide rise. Crawl on hands and knees with wet fabric covering face.</li>
+            <li>Wear 100% natural fibers (wool, heavy cotton). Avoid synthetics (nylon/polyester) which melt onto human skin.</li>
+            <li>Close all interior doors in structures to slow thermal convection and oxygen feeding the blaze.</li>
+          </ul>
+        </div>
+
+        <div class="playbook-card">
+          <h3><span>🩸</span> Severe Trauma, Bleeding & First Aid</h3>
+          <ul class="playbook-steps">
+            <li>Control Severe Hemorrhage: Apply firm, relentless two-handed direct pressure over the wound using clean gauze.</li>
+            <li>Arterial Bleeding (Pulsing bright red): Apply a tourniquet 2-3 inches above wound (never over a joint). Tighten until bleeding stops.</li>
+            <li>Shock Management: Lay victim flat, elevate legs slightly, and keep warm with space blankets or jackets.</li>
+            <li>Open Chest Wounds: Seal with airtight plastic on 3 sides to create a flutter valve preventing tension pneumothorax.</li>
+          </ul>
+        </div>
+
+        <div class="playbook-card">
+          <h3><span>💧</span> Off-Grid Potable Water & Sanitation</h3>
+          <ul class="playbook-steps">
+            <li>Boiling: Bring water to a rolling boil for a full 1 minute (3 minutes at elevations &gt; 2,000m) to kill all parasites.</li>
+            <li>SODIS: Place clear water in clear PET plastic bottles in direct sunlight for 6 hours (UV disinfection).</li>
+            <li>Chemical Purification: Use unscented household bleach: 2 drops per 1 liter of clear water, let sit 30 minutes.</li>
+            <li>Never drink floodwater, seawater, or water near chemical spills or industrial plants.</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 4: TESTING & DIAGNOSTICS LAB
+         ==================================================================== -->
+    <section id="view-testing-diagnostics" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header-title">Testing Lab, Protocol Validation & Telemetry</h2>
+          <p class="section-header-desc">
+            Benchmark packet delivery rates, hop latencies, duplicate suppression performance, 
+            and estimated battery conservation using clearly labelled simulated test harnesses.
+          </p>
+        </div>
+      </div>
+
+      <!-- Prominent Simulation Disclaimer Banner -->
+      <div class="diagnostics-banner">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+        </svg>
+        <div class="diagnostics-banner-text">
+          <strong>SIMULATION TRANSPARENCY NOTICE:</strong>
+          The metrics and transmission traces below represent simulated radio physics, multi-hop mesh propagation, 
+          and hardware power profiles. Browser Local Storage, HTML5 Geolocation, Web Audio API, input security, 
+          and duplicate suppression algorithms are <strong>100% genuine in-browser implementations</strong>.
+        </div>
+      </div>
+
+      <!-- Diagnostics Telemetry Grid -->
+      <div class="diagnostics-grid">
+
+        <!-- Card 1: Delivery Success Gauge -->
+        <div class="diag-card">
+          <div class="diag-card-title">
+            <span>Delivery Success Rate</span>
+            <span class="sim-disclaimer-pill">SIMULATED RF</span>
+          </div>
+          <div class="diag-stat-large" style="color:var(--safe-green);">94.8%</div>
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+            Simulated LoRa 868MHz packet delivery over multi-hop urban rubble topology.
+          </div>
+          <div class="diag-chart-bar-container">
+            <div class="diag-bar-row">
+              <div class="diag-bar-labels"><span>Mesh Multi-Hop Delivery</span><span>94.8%</span></div>
+              <div class="diag-bar-track"><div class="diag-bar-val" style="width:94.8%; background:var(--safe-green);"></div></div>
+            </div>
+            <div class="diag-bar-row">
+              <div class="diag-bar-labels"><span>Direct Line-of-Sight</span><span>98.2%</span></div>
+              <div class="diag-bar-track"><div class="diag-bar-val" style="width:98.2%; background:var(--cyan-telemetry);"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Hop Response Latency -->
+        <div class="diag-card">
+          <div class="diag-card-title">
+            <span>Simulated Hop Latency</span>
+            <span class="sim-disclaimer-pill">RF PROPAGATION</span>
+          </div>
+          <div class="diag-stat-large" style="color:var(--cyan-telemetry);">380 ms</div>
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+            Average packet transit time across 3 intermediate disaster mesh repeaters.
+          </div>
+          <div class="diag-chart-bar-container">
+            <div class="diag-bar-row">
+              <div class="diag-bar-labels"><span>Hop 1 (Citizen → Edge)</span><span>120 ms</span></div>
+              <div class="diag-bar-track"><div class="diag-bar-val" style="width:25%; background:var(--cyan-telemetry);"></div></div>
+            </div>
+            <div class="diag-bar-row">
+              <div class="diag-bar-labels"><span>Hop 2 (Edge → Repeater)</span><span>240 ms</span></div>
+              <div class="diag-bar-track"><div class="diag-bar-val" style="width:50%; background:var(--cyan-telemetry);"></div></div>
+            </div>
+            <div class="diag-bar-row">
+              <div class="diag-bar-labels"><span>Hop 3 (Repeater → HQ Base)</span><span>540 ms</span></div>
+              <div class="diag-bar-track"><div class="diag-bar-val" style="width:85%; background:var(--cyan-telemetry);"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Battery Conservation Impact -->
+        <div class="diag-card">
+          <div class="diag-card-title">
+            <span>Estimated Battery Impact</span>
+            <select id="batteryHoursSelect" class="filter-select" style="font-size:0.75rem;">
+              <option value="6">6 Hours Duration</option>
+              <option value="12" selected>12 Hours Duration</option>
+              <option value="24">24 Hours Duration</option>
+            </select>
+          </div>
+          <div class="diag-stat-large" id="battEfficiencyGain" style="color:#ffd54f;">89.4% Conserved</div>
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+            BLE/LoRa intermittent mesh advertising vs continuous cellular tower search drain.
+          </div>
+          <div class="diag-chart-bar-container">
+            <div class="diag-bar-row">
+              <div class="diag-bar-labels"><span>OFFGRID-RESQ BLE Mesh</span><span id="battOffgridPercent">4.8% (168 mAh)</span></div>
+              <div class="diag-bar-track"><div class="diag-bar-val" id="battOffgridDrain" style="width:5%; background:var(--safe-green);"></div></div>
+            </div>
+            <div class="diag-bar-row">
+              <div class="diag-bar-labels"><span>Cellular Continuous Search</span><span id="battCellularPercent">82.3% (2880 mAh)</span></div>
+              <div class="diag-bar-track"><div class="diag-bar-val" id="battCellularDrain" style="width:82%; background:var(--critical-red);"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Duplicate Suppression Engine Log Table -->
+      <div class="status-card" style="margin-bottom:24px;">
+        <div class="status-card-header">
+          <h3>
+            <span>🔄</span> Duplicate Suppression & Bandwidth Optimization
+            <span class="sim-disclaimer-pill" style="margin-left:8px;">GENUINE LOGIC</span>
+          </h3>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:0.78rem; color:var(--text-muted);">Bandwidth Conserved: <strong id="diagBytesSaved" style="color:var(--safe-green);">0.0 KB</strong></span>
+            <button id="runBurstTestBtn" class="btn-sm btn-ack">🚀 RUN 5-PACKET BURST STRESS TEST</button>
+          </div>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+          When panicked citizens repeatedly submit SOS or multi-hop repeaters rebroadcast identical packets, 
+          the engine matches spatial coordinates and deterministic fingerprints to aggregate updates into a single ticket without congesting RF channels.
+        </p>
+
+        <div style="max-height:220px; overflow-y:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.78rem; text-align:left;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border-subtle); color:var(--text-muted);">
+                <th style="padding:8px;">Time</th>
+                <th style="padding:8px;">Incident ID</th>
+                <th style="padding:8px;">Suppression Status</th>
+                <th style="padding:8px;">Bandwidth Saved</th>
+              </tr>
+            </thead>
+            <tbody id="dedupLogsTableBody">
+              <!-- Rendered by App.renderDedupLogsTable() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Live Packet Inspector Terminal -->
+      <div class="terminal-card">
+        <div class="terminal-header">
+          <div class="terminal-title">
+            <span>📡</span>
+            <span>SIMULATED RF PACKET INSPECTOR TERMINAL (LoRa 868MHz / BLE 5.0)</span>
+          </div>
+          <span style="font-size:0.7rem; color:var(--text-dim);">BAUD: 115200 | SF: 7 | CR: 4/5</span>
+        </div>
+        <div id="packetInspectorTerminal" class="terminal-body">
+          <div class="terminal-line info"><span class="t-time">[INIT]</span> OFFGRID-RESQ Terminal initialized. Listening on simulated RF channels.</div>
+          <div class="terminal-line success"><span class="t-time">[INIT]</span> LocalStorage engine mounted. Storage quota: 5,242,880 bytes available.</div>
+          <div class="terminal-line"><span class="t-time">[TOPOLOGY]</span> Node repeater NODE-R1 [Sector 4] active. RSSI: -82 dBm.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 5: SYSTEM ARCHITECTURE & PROTOCOLS
+         ==================================================================== -->
+    <section id="view-architecture-spec" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header-title">System Architecture & Hardware Protocol Specification</h2>
+          <p class="section-header-desc">
+            Overview of the multi-tier disaster mesh stack, cryptographic packet packaging, 
+            and hardware abstraction hooks for real-world LoRa, Meshtastic, and BLE integration.
+          </p>
+        </div>
+      </div>
+
+      <!-- Mesh Topology Diagram -->
+      <div class="arch-overview-card">
+        <h3 style="font-size:1.05rem; color:#fff; margin-bottom:8px;">End-to-End Off-Grid Data Flow Topology</h3>
+        <p style="font-size:0.82rem; color:var(--text-muted);">
+          How an emergency SOS travels from a citizen's offline phone to rescue command when cellular towers and the Internet are severed:
+        </p>
+
+        <div class="mesh-topology-diagram">
+          <div class="topo-node">
+            <div class="topo-node-icon">📱</div>
+            <div class="topo-node-title">Citizen Device</div>
+            <div class="topo-node-desc">PWA / Browser Flash Storage + BLE Advertiser</div>
+          </div>
+          <div class="topo-arrow">➔</div>
+
+          <div class="topo-node">
+            <div class="topo-node-icon">💾</div>
+            <div class="topo-node-title">Local Outbox</div>
+            <div class="topo-node-desc">LocalStorage persistent queue + Deduplication Hash</div>
+          </div>
+          <div class="topo-arrow">➔</div>
+
+          <div class="topo-node">
+            <div class="topo-node-icon">📡</div>
+            <div class="topo-node-title">Edge Mesh Node</div>
+            <div class="topo-node-desc">LoRa 868/915MHz or BLE 5.0 Long-Range Relay</div>
+          </div>
+          <div class="topo-arrow">➔</div>
+
+          <div class="topo-node">
+            <div class="topo-node-icon">⛰️</div>
+            <div class="topo-node-title">Hilltop Repeater</div>
+            <div class="topo-node-desc">Solar-Powered High Ground Relay Station</div>
+          </div>
+          <div class="topo-arrow">➔</div>
+
+          <div class="topo-node hq">
+            <div class="topo-node-icon">🛡️</div>
+            <div class="topo-node-title">Rescue HQ</div>
+            <div class="topo-node-desc">Triage Classifier & Multi-Agency Dispatch Dashboard</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real vs Simulated Capabilities Matrix -->
+      <div class="arch-overview-card">
+        <h3 style="font-size:1.05rem; color:#fff; margin-bottom:14px;">Real vs. Simulated Capabilities Matrix</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border-subtle); color:var(--text-muted); text-align:left;">
+              <th style="padding:10px;">Subsystem</th>
+              <th style="padding:10px;">Status in this App</th>
+              <th style="padding:10px;">Implementation Mechanism</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px; font-weight:700; color:#fff;">Offline Storage</td>
+              <td><span style="color:var(--safe-green); font-weight:700;">✔ 100% Implemented</span></td>
+              <td style="color:var(--text-muted);">Browser HTML5 LocalStorage & Cache with JSON serialization.</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px; font-weight:700; color:#fff;">GPS Geolocation</td>
+              <td><span style="color:var(--safe-green); font-weight:700;">✔ 100% Implemented</span></td>
+              <td style="color:var(--text-muted);">Native HTML5 Geolocation API with accuracy meter + manual grid fallback.</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px; font-weight:700; color:#fff;">Heuristic Triage Engine</td>
+              <td><span style="color:var(--safe-green); font-weight:700;">✔ 100% Implemented</span></td>
+              <td style="color:var(--text-muted);">Deterministic START triage algorithm with point breakdown & explainability.</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px; font-weight:700; color:#fff;">Duplicate Suppression</td>
+              <td><span style="color:var(--safe-green); font-weight:700;">✔ 100% Implemented</span></td>
+              <td style="color:var(--text-muted);">Spatial & demographic composite hashing to merge repeated broadcasts.</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px; font-weight:700; color:#fff;">Tactical Canvas Map</td>
+              <td><span style="color:var(--safe-green); font-weight:700;">✔ 100% Implemented</span></td>
+              <td style="color:var(--text-muted);">Pure HTML5 Canvas vector rendering with zero external CDN dependencies.</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px; font-weight:700; color:#fff;">Distress Audio Beacon</td>
+              <td><span style="color:var(--safe-green); font-weight:700;">✔ 100% Implemented</span></td>
+              <td style="color:var(--text-muted);">Synthesizes 800Hz Morse code SOS via browser Web Audio API.</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+              <td style="padding:10px; font-weight:700; color:#fff;">Multi-Hop RF Mesh Relay</td>
+              <td><span style="color:var(--high-orange); font-weight:700;">⚡ Simulated Architecture</span></td>
+              <td style="color:var(--text-muted);">Simulated RF propagation latency & hops. Hardware hooks ready for Web Bluetooth / WebSerial.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Binary Packet Structure Specification -->
+      <div class="arch-overview-card">
+        <h3 style="font-size:1.05rem; color:#fff; margin-bottom:10px;">184-Byte Compact Binary Mesh Packet Specification</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+          To transmit over low-bandwidth LoRa channels (maximum 256 bytes per packet), OFFGRID-RESQ uses compact bit-packing:
+        </p>
+        <div class="code-block">
++-----------------------------------------------------------------------------------+
+| MAGIC HEADER (4B): 0x52455351 ("RESQ")                                            |
+| PROTOCOL VER (1B): 0x01 | TTL HOPS (1B): 0x05 | TRAVERSED (1B): 0x02              |
+| INCIDENT ID  (8B): Cryptographic Hex Token (e.g. "RESQ-2026-F981")               |
+| TIMESTAMP    (4B): Unix Epoch 32-bit Integer                                      |
+| GEO-LAT      (4B): IEEE 754 32-bit Float (5 decimal precision ~1.1m)              |
+| GEO-LNG      (4B): IEEE 754 32-bit Float (5 decimal precision ~1.1m)              |
+| TRIAGE SCORE (1B): 0 to 100 Integer | PRIORITY (2b): [0=Med, 1=High, 2=Crit]      |
+| EMERGENCY    (4b): Type [1=Flood, 2=Collapse, 3=Fire, 4=Medical, 5=Cyclone, 6=Gas]|
+| CASUALTIES   (8b): Victims Count | SEVERITY (4b): [0=None, 1=Min, 2=Sev, 3=Crit]   |
+| PRIVACY PII  (32B): AES-GCM Encrypted Citizen Contact Token                       |
+| CHECKSUM     (8B): HMAC-SHA256 Integrity Verification Tag                         |
++-----------------------------------------------------------------------------------+
+TOTAL PACKET SIZE: 184 BYTES (FITS IN SINGLE LORA TRANSMISSION WINDOW)
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ====================================================================
+       MODALS
+       ==================================================================== -->
+
+  <!-- 1. Transmission Hop-by-Hop Progress Modal -->
+  <div id="transmissionModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><span>📡</span> Off-Grid Mesh Transmission Relay</h3>
+        <button class="modal-close-btn" id="closeTxModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:0.84rem; color:var(--text-muted); margin-bottom:16px;">
+          Broadcasting packet for Incident <strong id="txModalIncidentId" style="color:#fff;">--</strong> 
+          (<span id="txModalPriority" style="color:var(--critical-red); font-weight:700;">CRITICAL</span>).
+        </div>
+
+        <div class="timeline-steps">
+          <div id="txStep1" class="timeline-step">
+            <div class="step-dot">1</div>
+            <div class="step-details">
+              <h4>Local Storage Flash Cache</h4>
+              <p>Writing encrypted payload to browser LocalStorage...</p>
+            </div>
+          </div>
+
+          <div id="txStep2" class="timeline-step">
+            <div class="step-dot">2</div>
+            <div class="step-details">
+              <h4>Hop 1: Edge Repeater [NODE-R1]</h4>
+              <p>Relaying via LoRa 868MHz edge antenna...</p>
+            </div>
+          </div>
+
+          <div id="txStep3" class="timeline-step">
+            <div class="step-dot">3</div>
+            <div class="step-details">
+              <h4>Hop 2: High Ground Gateway [NODE-R2]</h4>
+              <p>Relaying to hilltop relay station (+38m elevation)...</p>
+            </div>
+          </div>
+
+          <div id="txStep4" class="timeline-step">
+            <div class="step-dot">4</div>
+            <div class="step-details">
+              <h4>Hop 3: Rescue HQ Base Station</h4>
+              <p>Acknowledged by Rescue Command triage dispatch queue...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="document.getElementById('transmissionModal').classList.remove('active');">
+          Dismiss / Continue
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Triage Rationale Explainability Modal -->
+  <div id="triageModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><span>🧠</span> Explainable AI Triage Rationale</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+          <div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">Incident Target:</div>
+            <div id="triageModalId" style="font-family:var(--font-mono); font-weight:700; color:#fff; font-size:1.1rem;">--</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.8rem; color:var(--text-muted);">Computed Triage Score:</div>
+            <div id="triageModalScore" style="font-family:var(--font-mono); font-weight:800; font-size:1.3rem; color:var(--cyan-telemetry);">--/100</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <span style="font-size:0.84rem; font-weight:600; color:#fff;">Classification: </span>
+          <span id="triageModalPriority" class="priority-tag critical">CRITICAL</span>
+        </div>
+
+        <div style="font-size:0.85rem; font-weight:600; color:#fff; margin-bottom:8px;">Protocol Decision Factors:</div>
+        <ul id="triageModalRationaleList" style="list-style:none; padding-left:0; font-size:0.82rem;">
+          <!-- Dynamically populated -->
+        </ul>
+
+        <div style="margin-top:16px; font-size:0.75rem; color:var(--text-muted); background:rgba(0,0,0,0.25); padding:10px; border-radius:6px;">
+          ℹ️ Triage classification uses an offline heuristic rule-based engine modeling START (Simple Triage and Rapid Treatment) guidelines, adjusted for off-grid environmental and RF telemetry hazards.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="document.getElementById('triageModal').classList.remove('active');">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Dispatch Rescue Unit Modal -->
+  <div id="dispatchModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><span>🚁</span> Dispatch Rescue Unit</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+          Assign and deploy specialized emergency response assets to Incident <strong id="dispatchIncidentId" style="color:#fff;">--</strong>:
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Select Response Asset</label>
+          <select id="dispatchUnitSelect" class="filter-select" style="width:100%; padding:10px;">
+            <option value="High-Water Rescue Boat Alpha">🚤 High-Water Rescue Boat Alpha (Floods / Water Rescue)</option>
+            <option value="Heavy Structural SAR Team 3">🚜 Heavy Structural SAR Team 3 (Collapse / Debris Pinned)</option>
+            <option value="Emergency Paramedic Unit 1">🚑 Emergency Paramedic Unit 1 (Critical Trauma / Resuscitation)</option>
+            <option value="Aerial Recon & Supply Drone Echo">🚁 Aerial Recon & Supply Drone Echo (Thermal Search / Droppable First Aid)</option>
+            <option value="Wildfire Evacuation Transport Beta">🚒 Wildfire Evacuation Transport Beta (Brushfire Perimeter)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="document.getElementById('dispatchModal').classList.remove('active');">Cancel</button>
+        <button id="confirmDispatchBtn" class="btn-sm btn-ack" style="padding:8px 16px;">Authorize & Dispatch Unit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Responder PIN Authorization Modal -->
+  <div id="pinAuthModal" class="modal-backdrop">
+    <div class="modal-box" style="max-width:440px;">
+      <div class="modal-header">
+        <h3><span>🔒</span> Responder PII Authorization</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="pinAuthForm">
+        <div class="modal-body">
+          <p style="font-size:0.84rem; color:var(--text-muted); margin-bottom:14px;">
+            Citizen personal contact details are privacy-masked by default to protect against unauthorized interception across public RF broadcasts.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Enter Responder Access PIN</label>
+            <input type="password" id="responderPinInput" class="text-input" placeholder="Demo PIN: 9110" required autofocus>
+            <div style="font-size:0.72rem; color:var(--cyan-telemetry); margin-top:6px; font-family:var(--font-mono);">
+              DEMO ACCESS PIN: 9110
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('pinAuthModal').classList.remove('active');">Cancel</button>
+          <button type="submit" class="btn-sm btn-ack">Unlock PII Data</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Fullscreen Morse Strobe Overlay for Night Rescues -->
+  <div id="strobeOverlay" title="Tap anywhere to stop strobe"></div>
+
+  <!-- Application Logic Modules -->
+  <script src="js/storage.js"></script>
+  <script src="js/triage.js"></script>
+  <script src="js/dedup.js"></script>
+  <script src="js/shelters.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/meshProtocol.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Service Worker Registration for Complete Offline Operation -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('OFFGRID-RESQ Service Worker Registered for Offline Cache', reg.scope))
+          .catch(err => console.warn('Service Worker registration skipped/failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>

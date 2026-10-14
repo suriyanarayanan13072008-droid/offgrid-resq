@@ -1,0 +1,17 @@
+{
+  "name": "OFFGRID-RESQ – Offline Disaster Communication & Evacuation",
+  "short_name": "OFFGRID-RESQ",
+  "description": "AI-Powered Offline Disaster Communication and Evacuation System",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff2a4b'%3E%3Cpath d='M12 2L1 21h22L12 2zm0 3.8L19.8 19H4.2L12 5.8zM11 10h2v4h-2zm0 6h2v2h-2z'/%3E%3C/svg%3E",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
